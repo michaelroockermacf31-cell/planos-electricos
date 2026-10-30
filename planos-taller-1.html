@@ -1,0 +1,236 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Planos Eléctricos M&amp;C</title>
+<meta name="theme-color" content="#14181b">
+<link rel="manifest" href="planos-taller-manifiesto.json">
+<link rel="icon" href="planos-icono-chico.png">
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+<style>
+*{box-sizing:border-box;margin:0;padding:0}
+body{font-family:Arial,sans-serif;background:#14181b;color:#e9e4d8;max-width:900px;margin:0 auto;padding:14px}
+h1{font-size:21px;color:#fff}.sub{font-size:13px;color:#9fb0b8;margin:4px 0 14px}
+.card{background:#1b2124;border:1px solid #3a464c;border-radius:10px;padding:14px;margin-bottom:14px}
+h2{font-size:16px;color:#5fa8d3;margin-bottom:10px}
+label{display:block;font-size:13px;color:#9fb0b8;margin:8px 0 3px}
+input{width:100%;padding:11px;border-radius:6px;border:1px solid #3a464c;background:#14181b;color:#fff;font-size:16px}
+.g2{display:grid;grid-template-columns:1fr 1fr;gap:8px}.g3{display:grid;grid-template-columns:1fr 1fr 1fr;gap:8px}
+button{padding:13px;border:0;border-radius:6px;font-size:16px;font-weight:700;width:100%;margin-top:10px;cursor:pointer;color:#fff}
+.o{background:#b5502f}.b{background:#2c7fb8}.v{background:#27ae60}.r{background:#6b2b2b;width:auto;padding:6px 10px;font-size:13px;margin:0}
+.item{display:flex;justify-content:space-between;align-items:center;gap:8px;padding:8px 0;border-bottom:1px solid #2c3a40;font-size:14px}
+table{width:100%;border-collapse:collapse;font-size:12px;margin-top:6px}th,td{padding:6px 4px;border-bottom:1px solid #2c3a40;text-align:left}th{color:#5fa8d3}
+.wrap{overflow-x:auto}canvas{width:100%;background:#fff;border-radius:6px}
+.nota{font-size:12px;color:#9fb0b8;margin-top:8px}#oido{font-size:13px;color:#e8c36a;margin-top:6px;min-height:18px}
+</style>
+</head>
+<body>
+<h1>⚡ Planos Eléctricos M&amp;C</h1>
+<p class="sub">Crea el plano de cualquier casa: recintos, puntos, alturas, cables, tuberías y cuadro de cargas.</p>
+
+<div class="card"><h2>1. Datos generales</h2>
+<label>Nombre del proyecto</label><input id="proy" placeholder="Ej: Casa Pérez, Cartagena">
+<div class="g3">
+<div><label>Alto cielo (m)</label><input id="cielo" inputmode="decimal"></div>
+<div><label>Watts por luz</label><input id="wl" inputmode="decimal"></div>
+<div><label>Watts por enchufe</label><input id="we" inputmode="decimal"></div>
+</div></div>
+
+<div class="card"><h2>2. Agregar recinto</h2>
+<button id="mic" class="b" style="margin-top:0" onclick="dictar()">🎤 Dictar recinto</button>
+<label>Lo que escuché (puedes corregirlo con el teclado)</label>
+<textarea id="dic" rows="2" style="width:100%;padding:11px;border-radius:6px;border:1px solid #3a464c;background:#14181b;color:#fff;font-size:16px;font-family:Arial,sans-serif"></textarea>
+<button class="v" style="margin-top:6px" onclick="interpretar($('dic').value)">✅ Entender y llenar los campos</button>
+<div id="oido">Ejemplo: “dormitorio 3 por 4 metros, 4 enchufes a 40 centímetros, 2 luces, 1 interruptor”</div>
+<label>Nombre</label><input id="rn" placeholder="Ej: Dormitorio">
+<div class="g3">
+<div><label>Ancho (m)</label><input id="ra" inputmode="decimal"></div>
+<div><label>Largo (m)</label><input id="rl" inputmode="decimal"></div>
+<div><label>Distancia al tablero (m)</label><input id="rd" inputmode="decimal" value="5"></div>
+</div>
+<div class="g3">
+<div><label>Luces (centros)</label><input id="nl" inputmode="numeric" value="1"></div>
+<div><label>Enchufes</label><input id="ne" inputmode="numeric" value="2"></div>
+<div><label>Interruptores</label><input id="ni" inputmode="numeric" value="1"></div>
+</div>
+<div class="g3">
+<div><label>Altura luz (m)</label><input id="hl" inputmode="decimal" placeholder="cielo"></div>
+<div><label>Altura enchufe (m)</label><input id="he" inputmode="decimal" value="0.4"></div>
+<div><label>Altura interruptor (m)</label><input id="hi" inputmode="decimal" value="1.2"></div>
+</div>
+<button class="o" onclick="agregar()">➕ Agregar recinto</button></div>
+
+<div class="card"><h2>Recintos agregados</h2><div id="lista"></div><button class="r" style="margin-top:12px" onclick="limpiarTodo()">🗑️ Borrar todos los recintos y cargas</button></div>
+
+<div class="card"><h2>3. Cargas especiales (opcional)</h2>
+<p class="nota" style="margin:0 0 4px">Calefón, horno, cocina, aire acondicionado… cada una tiene su propio automático.</p>
+<div class="g2"><div><label>Nombre</label><input id="en" placeholder="Ej: Calefón eléctrico"></div><div><label>Potencia (W)</label><input id="ew" inputmode="decimal"></div></div>
+<button class="b" onclick="agregarEsp()">➕ Agregar carga</button><div id="listaEsp"></div></div>
+
+<button class="o" onclick="calcular()">📐 Calcular y ver plano</button>
+<div id="res"></div>
+
+<script>
+const $=id=>document.getElementById(id);
+const num=(id,d)=>{const v=parseFloat(String($(id).value).replace(',','.'));return isNaN(v)?d:v};
+let S={cielo:2.4,wl:100,we:200,proy:'',rooms:[],esp:[]},U=null;
+try{Object.assign(S,JSON.parse(localStorage.getItem('planoelec')||'{}'))}catch(e){}
+function save(){try{localStorage.setItem('planoelec',JSON.stringify(S))}catch(e){}}
+['proy','cielo','wl','we'].forEach(k=>{$(k).value=S[k];$(k).addEventListener('input',()=>{S[k]=k==='proy'?$(k).value:num(k,S[k]);save()})});
+const esc=s=>String(s).replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+function lista(){
+ $('lista').innerHTML=S.rooms.length?S.rooms.map((r,i)=>'<div class="item"><span><b>'+esc(r.n)+'</b> '+r.a+'×'+r.l+' m<br><small>'+r.nl+' luces · '+r.ne+' enchufes · '+r.ni+' interruptores</small></span><button class="r" onclick="borrar('+i+')">Quitar</button></div>').join(''):'<p class="nota">Aún no hay recintos.</p>';
+ $('listaEsp').innerHTML=S.esp.map((e,i)=>'<div class="item"><span>'+esc(e.n)+' — '+e.w+' W</span><button class="r" onclick="borrarEsp('+i+')">Quitar</button></div>').join('');
+}
+function borrar(i){S.rooms.splice(i,1);save();lista()}
+function borrarEsp(i){S.esp.splice(i,1);save();lista()}
+function agregar(){
+ const n=$('rn').value.trim(),a=num('ra',0),l=num('rl',0);
+ if(!n||a<=0||l<=0){alert('Completa nombre, ancho y largo');return}
+ if((a<1.5||l<1.5)&&!confirm('Las medidas son muy pequeñas ('+a+' × '+l+' m). Recuerda que van en metros. ¿Agregar igual?'))return;
+ S.rooms.push({n,a,l,d:num('rd',5),nl:Math.round(num('nl',0)),ne:Math.round(num('ne',0)),ni:Math.round(num('ni',0)),hl:num('hl',S.cielo),he:num('he',0.4),hi:num('hi',1.2)});
+ save();lista();['rn','ra','rl','hl'].forEach(k=>$(k).value='');$('oido').textContent='Recinto agregado ✔';$('dic').value='';
+}
+function agregarEsp(){const n=$('en').value.trim(),w=num('ew',0);if(!n||w<=0){alert('Completa nombre y potencia');return}S.esp.push({n,w});save();lista();$('en').value='';$('ew').value=''}
+const PAL={un:1,uno:1,una:1,dos:2,tres:3,cuatro:4,cinco:5,seis:6,siete:7,ocho:8,nueve:9,diez:10};
+function dictar(){
+ const SR=window.SpeechRecognition||window.webkitSpeechRecognition;
+ if(!SR){$('oido').textContent='Este navegador no permite dictado. Usa Chrome o escribe en el cuadro.';return}
+ if(RC){try{RC.stop()}catch(e){}return}
+ const rc=new SR();RC=rc;rc.lang='es-CL';rc.continuous=false;rc.interimResults=true;
+ const base=$('dic').value.trim();
+ rc.onresult=e=>{let t='';for(let i=0;i<e.results.length;i++)t+=e.results[i][0].transcript+' ';$('dic').value=(base+' '+t).trim()};
+ rc.onend=()=>{RC=null;$('mic').textContent='🎤 Dictar recinto';if($('dic').value.trim())interpretar($('dic').value)};
+ rc.onerror=ev=>{$('oido').textContent='No te escuché ('+ev.error+'). Toca el micrófono otra vez o escribe en el cuadro.'};
+ $('mic').textContent='⏹ Terminar dictado';
+ $('oido').textContent='🎙️ Escuchando… habla y espera un segundo al terminar';
+ rc.start();
+}
+let RC=null;
+function interpretar(t0){
+ let t=t0.toLowerCase().replace(/^\s+/,'');
+ t=t.replace(/^(?:(?:agregar|agrega|crear|crea|a[ñn]adir|a[ñn]ade|nuevo|nueva|recinto)\s+)+/,'');
+ const t1=t;
+ const m=t1.match(/^(.*?)(?=\s(?:\d|uno|una|un|dos|tres|cuatro|cinco|seis|siete|ocho|nueve|diez)\b|,|$)/);
+ let nombre=(m?m[1]:'').replace(/^(un|una|el|la)\s+/,'').replace(/\s+de$/,'').trim();
+ t=t.replace(/\b(uno|una|un|dos|tres|cuatro|cinco|seis|siete|ocho|nueve|diez)\b/g,w=>PAL[w]);
+ const nr='(\\d+(?:[.,]\\d+)?)';
+ const dim=t.match(new RegExp(nr+'\\s*(?:por|x|×)\\s*'+nr));
+ const cnt=re=>{const x=t.match(new RegExp('(\\d+)\\s*(?:'+re+')'));return x?x[1]:null};
+ const alt=re=>{const x=t.match(new RegExp('(?:'+re+')[^,\\d]*?\\ba\\s*'+nr+'\\s*(cm|cent[ií]metros|metros|m)\\b'));if(!x)return null;let v=parseFloat(x[1].replace(',','.'));return /^c/.test(x[2])?v/100:v};
+ const nl=cnt('luces|luz|focos?|centros?|l[aá]mparas?'),ne=cnt('enchufes?|tomacorrientes?|tomas?'),ni=cnt('interruptor(?:es)?|switch(?:es)?');
+ const hl=alt('luces|luz|focos?|centros?'),he=alt('enchufes?|tomacorrientes?|tomas?'),hi=alt('interruptor(?:es)?');
+ if(nombre)$('rn').value=nombre.charAt(0).toUpperCase()+nombre.slice(1);
+ if(dim){$('ra').value=dim[1].replace(',','.');$('rl').value=dim[2].replace(',','.')}
+ if(nl)$('nl').value=nl;if(ne)$('ne').value=ne;if(ni)$('ni').value=ni;
+ if(hl)$('hl').value=hl;if(he)$('he').value=he;if(hi)$('hi').value=hi;
+ $('oido').textContent='Entendí: “'+t0+'”. Revisa los campos y toca Agregar recinto.';
+}
+const nxt=(i,a)=>a.find(x=>x>=i)||a[a.length-1];
+const STD=[10,16,20,25,32,40,50,63],MM={10:1.5,16:2.5,20:4,25:4,32:6,40:10,50:10,63:16};
+function calcular(){
+ if(!S.rooms.length){alert('Agrega al menos un recinto');return}
+ let Wl=0,We=0,c15=0,c25=0,cond=0,nl=0,ne=0,ni=0;
+ S.rooms.forEach(r=>{
+  const base=(r.a+r.l)/2,run=(n,h)=>n*(base+Math.max(0,S.cielo-h));
+  const ral=(r.nl+r.ni>0?r.d:0)+run(r.nl,r.hl)+run(r.ni,r.hi),ren=(r.ne>0?r.d:0)+run(r.ne,r.he);
+  c15+=3*ral;c25+=3*ren;cond+=ral+ren;nl+=r.nl;ne+=r.ne;ni+=r.ni;
+ });
+ Wl=nl*S.wl;We=ne*S.we;const C=[];
+ const nal=Math.ceil(Wl/1840);for(let i=1;i<=nal;i++)C.push({n:'Alumbrado '+i,w:Wl/nal,a:10});
+ const nen=Math.ceil(We/2900);for(let i=1;i<=nen;i++)C.push({n:'Enchufes '+i,w:We/nen,a:16});
+ S.esp.forEach(e=>C.push({n:e.n,w:e.w,a:nxt(e.w/230,STD)}));
+ C.forEach(c=>{c.i=c.w/230;c.mm=MM[c.a]});
+ const W=C.reduce((s,c)=>s+c.w,0),I=W/230,gen=nxt(I,[16,20,25,32,40,50,63]),dif=nxt(gen,[25,40,63,80]);
+ const m=1.1,mat=[['Cable 1,5 mm² (alumbrado)',Math.ceil(c15*m)+' m'],['Cable 2,5 mm² (enchufes)',Math.ceil(c25*m)+' m'],['Tubería conduit 20 mm',Math.ceil(cond*m/3)+' barras de 3 m'],['Puntos de luz',nl],['Enchufes',ne],['Interruptores',ni],['Automáticos de circuito',C.length],['Automático general',gen+' A'],['Diferencial 30 mA',dif+' A']];
+ U={C,W,I,gen,dif,mat};
+ let h='<div class="card"><h2>Plano</h2><div class="wrap"><canvas id="cv"></canvas></div><p class="nota">○ luz · ■ enchufe · S interruptor. Esquema referencial, no a escala de obra.</p></div>';
+ h+='<div class="card"><h2>Cuadro de cargas</h2><div class="wrap"><table><tr><th>Circuito</th><th>Carga</th><th>Amp</th><th>Auto.</th><th>Cable</th></tr>'+C.map(c=>'<tr><td>'+esc(c.n)+'</td><td>'+Math.round(c.w)+' W</td><td>'+c.i.toFixed(1)+' A</td><td>'+c.a+' A</td><td>'+c.mm+' mm²</td></tr>').join('')+'</table></div>';
+ h+='<p style="margin-top:8px"><b>Total:</b> '+Math.round(W)+' W · '+I.toFixed(1)+' A (230 V) · <b>General:</b> '+gen+' A · <b>Diferencial:</b> '+dif+' A / 30 mA</p></div>';
+ h+='<div class="card"><h2>Materiales estimados</h2><table>'+mat.map(x=>'<tr><td>'+x[0]+'</td><td>'+x[1]+'</td></tr>').join('')+'</table><p class="nota">Incluye 10 % de merma. Referencial: lo revisa y firma un instalador autorizado SEC según NCh Elec 4/2003.</p></div>';
+ h+='<button class="v" onclick="pdf()">📄 Descargar PDF con firma</button><button class="b" onclick="dxf()">📐 Enviar o guardar DXF (AutoCAD)</button>';
+ $('res').innerHTML=h;dibujar();
+}
+function dibujar(){
+ const R=S.rooms,cv=$('cv'),Wd=480,mg=14,K=2;
+ const maxA=Math.max(...R.map(r=>r.a)),maxD=Math.max(...R.map(r=>Math.max(r.a,r.l)));
+ const lim=(Wd-2*mg)/maxA,s=Math.min(lim,Math.max(Math.min(45,lim),170/maxD));
+ let x=mg,y=mg,rh=0;const P=[];
+ R.forEach(r=>{const w=r.a*s,h=r.l*s;if(x+w>Wd-mg&&x>mg){x=mg;y+=rh+mg+8;rh=0}P.push([x,y,w,h]);x+=w+mg;rh=Math.max(rh,h)});
+ const Hd=y+rh+mg+34;cv.width=Wd*K;cv.height=Hd*K;const g=cv.getContext('2d');g.scale(K,K);
+ g.fillStyle='#fff';g.fillRect(0,0,Wd,Hd);g.strokeStyle='#000';g.fillStyle='#000';
+ R.forEach((r,i)=>{const [px,py,w,h]=P[i];
+  g.lineWidth=2.5;g.strokeRect(px,py,w,h);g.textAlign='left';
+  g.font='bold 15px Arial';g.fillText(r.n.slice(0,Math.max(6,Math.floor(w/9))),px+5,py+17);
+  g.font='12px Arial';g.fillText(r.a+' × '+r.l+' m',px+5,py+31);
+  const top=py+44,bot=py+h-18,cols=Math.ceil(Math.sqrt(r.nl)),rows=Math.ceil(r.nl/Math.max(cols,1));g.lineWidth=1.5;
+  for(let k=0;k<r.nl;k++){const cx=px+w*((k%cols)+1)/(cols+1),cy=top+Math.max(bot-top,20)*(Math.floor(k/cols)+0.5)/rows;g.beginPath();g.arc(cx,cy,9,0,7);g.stroke();g.beginPath();g.moveTo(cx-6,cy-6);g.lineTo(cx+6,cy+6);g.moveTo(cx+6,cy-6);g.lineTo(cx-6,cy+6);g.stroke()}
+  for(let k=0;k<r.ne;k++){const cx=px+w*(k+1)/(r.ne+1);g.fillRect(cx-5,py+h-11,10,10)}
+  g.font='bold 14px Arial';for(let k=0;k<r.ni;k++)g.fillText('S',px+6,py+50+k*16);
+ });
+ const ly=Hd-18;g.fillStyle='#000';g.font='13px Arial';
+ g.beginPath();g.arc(24,ly,8,0,7);g.stroke();g.fillText('Luz',38,ly+4);
+ g.fillRect(90,ly-5,10,10);g.fillText('Enchufe',106,ly+4);
+ g.font='bold 14px Arial';g.fillText('S',190,ly+5);g.font='13px Arial';g.fillText('Interruptor',204,ly+4);
+}
+function pdf(){
+ if(!U)calcular();
+ const {jsPDF}=window.jspdf,d=new jsPDF(),cv=$('cv');let y=18;
+ const L=(t,b,sz)=>{if(y>280){d.addPage();y=18}d.setFont(undefined,b?'bold':'normal');d.setFontSize(sz||10);d.text(String(t),15,y);y+=(sz||10)*0.5+2};
+ L('PLANO ELÉCTRICO REFERENCIAL',true,16);L(S.proy||'Proyecto sin nombre',true,12);L('M&C Digital · '+new Date().toLocaleDateString('es-CL'),false,9);y+=2;
+ const k=cv.height/cv.width;let w=180,h=w*k;if(h>150){h=150;w=h/k}
+ d.addImage(cv.toDataURL('image/png'),'PNG',15,y,w,h);y+=h+8;
+ L('Simbología: círculo = luz · cuadrado = enchufe · S = interruptor',false,9);
+ d.addPage();y=18;L('CUADRO DE CARGAS',true,13);
+ U.C.forEach(c=>L(c.n+': '+Math.round(c.w)+' W · '+c.i.toFixed(1)+' A · automático '+c.a+' A · cable '+c.mm+' mm²',false,10));
+ y+=2;L('Total: '+Math.round(U.W)+' W · '+U.I.toFixed(1)+' A · General '+U.gen+' A · Diferencial '+U.dif+' A / 30 mA',true,10);
+ y+=4;L('PUNTOS POR RECINTO',true,13);
+ S.rooms.forEach(r=>L(r.n+' ('+r.a+'×'+r.l+' m): '+r.nl+' luces a '+r.hl+' m · '+r.ne+' enchufes a '+r.he+' m · '+r.ni+' interruptores a '+r.hi+' m',false,9));
+ y+=4;L('MATERIALES ESTIMADOS (con 10 % de merma)',true,13);U.mat.forEach(x=>L(x[0]+': '+x[1],false,10));
+ y+=6;L('Documento referencial. Debe ser revisado y firmado por un instalador autorizado SEC (NCh Elec 4/2003).',false,8);
+ y+=22;d.line(15,y,100,y);y+=5;L('Firma del Técnico Autorizado',true,11);L('Nombre / RUT / Clase de licencia SEC: ____________________________',false,9);
+ d.save('Plano_Electrico_'+new Date().toISOString().split('T')[0]+'.pdf');
+}
+async function dxf(){
+ if(!U)calcular();
+ const R=S.rooms,Lr=[];
+ const ac=s=>String(s).normalize('NFD').replace(/[\u0300-\u036f]/g,'').replace(/[^\x20-\x7E]/g,'');
+ const ln=(l,a,b,c,e)=>Lr.push('0\nLINE\n8\n'+l+'\n10\n'+a+'\n20\n'+b+'\n30\n0\n11\n'+c+'\n21\n'+e+'\n31\n0');
+ const ci=(l,x,y,r)=>Lr.push('0\nCIRCLE\n8\n'+l+'\n10\n'+x+'\n20\n'+y+'\n30\n0\n40\n'+r);
+ const tx=(l,x,y,h,t)=>Lr.push('0\nTEXT\n8\n'+l+'\n10\n'+x+'\n20\n'+y+'\n30\n0\n40\n'+h+'\n1\n'+ac(t));
+ const rc=(l,x,y,w,h)=>{ln(l,x,y,x+w,y);ln(l,x+w,y,x+w,y+h);ln(l,x+w,y+h,x,y+h);ln(l,x,y+h,x,y)};
+ let x=0,y=0,rh=0;
+ R.forEach(r=>{
+  if(x+r.a>25&&x>0){x=0;y+=rh+1.5;rh=0}
+  rc('MUROS',x,y,r.a,r.l);
+  tx('TEXTOS',x+0.15,y+r.l-0.35,0.2,r.n);tx('TEXTOS',x+0.15,y+r.l-0.65,0.13,r.a+' x '+r.l+' m');
+  const cols=Math.ceil(Math.sqrt(r.nl)),rows=Math.ceil(r.nl/Math.max(cols,1));
+  for(let k=0;k<r.nl;k++){const cx=x+r.a*((k%cols)+1)/(cols+1),cy=y+r.l-r.l*(Math.floor(k/cols)+1)/(rows+1)-0.2;ci('LUCES',cx,cy,0.15);ln('LUCES',cx-0.1,cy-0.1,cx+0.1,cy+0.1);ln('LUCES',cx-0.1,cy+0.1,cx+0.1,cy-0.1);tx('TEXTOS',cx+0.2,cy-0.05,0.1,'h='+r.hl+'m')}
+  for(let k=0;k<r.ne;k++){const cx=x+r.a*(k+1)/(r.ne+1);rc('ENCHUFES',cx-0.08,y+0.05,0.16,0.16);tx('TEXTOS',cx-0.1,y+0.25,0.1,'h='+r.he+'m')}
+  for(let k=0;k<r.ni;k++){const cy=y+r.l-1.1-k*0.4;ci('INTERRUPTORES',x+0.25,cy,0.09);tx('INTERRUPTORES',x+0.21,cy-0.05,0.12,'S');tx('TEXTOS',x+0.4,cy-0.05,0.1,'h='+r.hi+'m')}
+  x+=r.a+1.5;rh=Math.max(rh,r.l);
+ });
+ let ty=-1.5;const T=(t,hh)=>{tx('CUADRO',0,ty,hh||0.18,t);ty-=(hh||0.18)+0.2};
+ T(S.proy||'PROYECTO ELECTRICO',0.3);T('CUADRO DE CARGAS (referencial, NCh Elec 4/2003 - validar por instalador SEC)',0.2);
+ U.C.forEach(c=>T(c.n+': '+Math.round(c.w)+' W / '+c.i.toFixed(1)+' A / automatico '+c.a+' A / cable '+c.mm+' mm2'));
+ T('Total '+Math.round(U.W)+' W / '+U.I.toFixed(1)+' A - General '+U.gen+' A - Diferencial '+U.dif+' A 30 mA');
+ ty-=0.4;T('Firma del Tecnico Autorizado: ______________________  SEC N: __________',0.2);
+ const cap=['MUROS','7','LUCES','2','ENCHUFES','4','INTERRUPTORES','3','TEXTOS','7','CUADRO','7'];
+ let tb='0\nSECTION\n2\nTABLES\n0\nTABLE\n2\nLTYPE\n70\n1\n0\nLTYPE\n2\nCONTINUOUS\n70\n0\n3\nSolid line\n72\n65\n73\n0\n40\n0.0\n0\nENDTAB\n0\nTABLE\n2\nLAYER\n70\n6';
+ for(let i=0;i<cap.length;i+=2)tb+='\n0\nLAYER\n2\n'+cap[i]+'\n70\n0\n62\n'+cap[i+1]+'\n6\nCONTINUOUS';
+ tb+='\n0\nENDTAB\n0\nENDSEC';
+ const out='0\nSECTION\n2\nHEADER\n9\n$ACADVER\n1\nAC1009\n0\nENDSEC\n'+tb+'\n0\nSECTION\n2\nENTITIES\n'+Lr.join('\n')+'\n0\nENDSEC\n0\nEOF\n';
+ const nombre='Plano_Electrico_'+new Date().toISOString().split('T')[0]+'.dxf';
+ try{const f=new File([out],nombre,{type:'application/octet-stream'});
+  if(navigator.canShare&&navigator.canShare({files:[f]})){await navigator.share({files:[f],title:nombre});return}}
+ catch(e){if(e&&e.name==='AbortError')return}
+ const a=document.createElement('a');a.href=URL.createObjectURL(new Blob([out],{type:'application/octet-stream'}));
+ a.download=nombre;document.body.appendChild(a);a.click();setTimeout(()=>a.remove(),1500);
+}
+function limpiarTodo(){if(confirm('¿Borrar todos los recintos y cargas?')){S.rooms=[];S.esp=[];save();lista();$('res').innerHTML=''}}
+if('serviceWorker' in navigator){navigator.serviceWorker.register("planos-taller-sw.js").catch(function(){})}
+lista();
+</script>
+</body>
+</html>
