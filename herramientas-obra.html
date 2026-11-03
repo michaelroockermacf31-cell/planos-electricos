@@ -1,0 +1,117 @@
+<!DOCTYPE html>
+<html lang="es"><head><meta charset="utf-8"><title>Herramientas de obra</title>
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<style>
+:root{--bg:#f6f4ef;--card:#fff;--tx:#1d1d1b;--mut:#6b6a65;--ac:#d9731a;--ok:#2e8b57;--bd:#e2ded4;color-scheme:light;box-sizing:border-box;padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px)}
+@media (prefers-color-scheme:dark){:root:not([data-theme="light"]){--bg:#171714;--card:#22221e;--tx:#f0eee8;--mut:#a5a39b;--bd:#3a3a34;color-scheme:dark}}
+:root[data-theme="dark"]{--bg:#171714;--card:#22221e;--tx:#f0eee8;--mut:#a5a39b;--bd:#3a3a34;color-scheme:dark}
+html{scroll-padding-top:env(safe-area-inset-top,0px)}
+body{margin:0;padding:12px;background:var(--bg);color:var(--tx);font:16px/1.4 system-ui,sans-serif}
+h1{font-size:20px;margin:4px 0 10px}h2{font-size:16px;margin:0 0 8px}
+.tabs{display:flex;gap:6px;margin-bottom:10px}
+.tabs button{flex:1;padding:10px 4px;border:1px solid var(--bd);background:var(--card);color:var(--tx);border-radius:10px;font:inherit;font-size:14px}
+.tabs button.on{background:var(--ac);color:#fff;border-color:var(--ac)}
+.card{background:var(--card);border:1px solid var(--bd);border-radius:14px;padding:12px;margin-bottom:10px}
+.mut{color:var(--mut);font-size:13px}
+button.b{padding:11px 14px;border:0;border-radius:10px;background:var(--ac);color:#fff;font:inherit;margin:4px 4px 0 0}
+button.g{background:var(--card);color:var(--tx);border:1px solid var(--bd)}
+input,textarea,select{width:100%;box-sizing:border-box;padding:9px;border:1px solid var(--bd);border-radius:8px;background:var(--bg);color:var(--tx);font:inherit}
+label{display:block;font-size:13px;color:var(--mut);margin:6px 0 2px}
+.row{display:flex;gap:6px}.row>*{flex:1}
+.big{font-size:44px;font-weight:700;text-align:center;margin:4px 0}
+.out{font-size:18px;font-weight:600;margin-top:8px}
+.pad{width:170px;height:170px;border-radius:50%;border:3px solid var(--bd);margin:8px auto;position:relative}
+.dot{position:absolute;left:50%;top:50%;width:28px;height:28px;margin:-14px;border-radius:50%;background:var(--ac)}
+.dot.ok{background:var(--ok)}
+.pad:before,.pad:after{content:"";position:absolute;background:var(--bd)}
+.pad:before{left:50%;top:0;bottom:0;width:1px}.pad:after{top:50%;left:0;right:0;height:1px}
+.hide{display:none}
+</style></head><body>
+<h1>🛠️ Herramientas de obra</h1>
+<div class="tabs"><button class="on" data-t="t1">Nivel</button><button data-t="t2">Alturas</button><button data-t="t3">Medidas</button></div>
+
+<div id="t1" class="tab">
+ <div class="card"><button class="b" id="go">Activar sensor</button> <span class="mut" id="st">Sensor apagado</span>
+ <label>Posición del celular</label>
+ <select id="mode"><option value="f">Acostado sobre la superficie</option><option value="v">De pie, apoyado en un muro</option></select>
+ <div class="pad"><div class="dot" id="dot"></div></div>
+ <div class="big" id="ang">0.0°</div>
+ <div class="mut" style="text-align:center" id="mm">0 mm por metro · 0 %</div>
+ <button class="b g" id="cal">Calibrar en 0</button>
+ <p class="mut">Calibra apoyando el celular en una superficie que sepas que está a nivel (o en un muro a plomo) y gíralo 180°: si da lo mismo, está bien.</p></div>
+</div>
+
+<div id="t2" class="tab hide">
+ <div class="card"><h2>Altura y distancia con solo el celular</h2>
+ <label>Altura del celular sobre el piso (m)</label><input id="hp" inputmode="decimal" value="1.50">
+ <p class="mut">1. Párate frente al muro y apunta la mitad de la pantalla a donde el muro toca el piso. Toca “Base”.<br>2. Apunta al borde del cielo. Toca “Cielo”.</p>
+ <div class="mut">Ángulo en vivo: <b id="el">0.0°</b></div>
+ <button class="b" id="cb">Base</button><button class="b" id="cc">Cielo</button><button class="b g" id="cv">Calibrar vertical</button>
+ <div class="out" id="r2">Faltan las dos lecturas</div>
+ <p class="mut">Mide a 2 o 6 m del muro. Más lejos pierde precisión. La distancia que sale sirve también como largo de la pieza si apuntas a la base del muro del fondo.</p></div>
+</div>
+
+<div id="t3" class="tab hide">
+ <div class="card"><h2>Superficie de piezas</h2><div id="rooms"></div>
+ <button class="b g" id="addr">+ Agregar pieza</button><div class="out" id="rt"></div></div>
+ <div class="card"><h2>Marca de nivel (tiza)</h2>
+ <div class="row"><div><label>Altura del cielo (m)</label><input id="hc" inputmode="decimal" value="2.40"></div>
+ <div><label>Marca desde el piso (m)</label><input id="hm" inputmode="decimal" value="1.00"></div></div>
+ <div class="out" id="rm"></div></div>
+ <div class="card"><h2>Desnivel del piso o terreno</h2>
+ <p class="mut">Con una manguera de nivel, mide en cada esquina la distancia (cm) de la línea de nivel al suelo. Escribe las lecturas separadas por espacios.</p>
+ <input id="lec" inputmode="decimal" placeholder="ej: 112 118 125 131">
+ <div class="out" id="rl"></div></div>
+</div>
+
+<p class="mut">Referencia aproximada: el sensor del celular tiene un margen de ±0,5°. Para terminaciones finas confirma con huincha o manguera de nivel.</p>
+
+<script>
+const $=id=>document.getElementById(id),R=Math.PI/180;
+const n=v=>parseFloat(String(v).replace(",","."));
+let o={b:0,g:0},off={fb:0,fg:0,vb:0},A=null,B=null,got=false;
+document.querySelectorAll(".tabs button").forEach(b=>b.onclick=()=>{
+ document.querySelectorAll(".tabs button").forEach(x=>x.classList.toggle("on",x===b));
+ document.querySelectorAll(".tab").forEach(t=>t.classList.toggle("hide",t.id!==b.dataset.t));});
+function listen(){window.addEventListener("deviceorientation",e=>{if(e.beta==null)return;got=true;o.b=e.beta;o.g=e.gamma||0;upd();});
+ $("st").textContent="Esperando datos del sensor…";
+ setTimeout(()=>{if(!got)$("st").textContent="El sensor no responde. Abre la página directo en Chrome (no dentro de otra app).";else $("st").textContent="Sensor activo ✓";},1500);}
+$("go").onclick=()=>{const D=window.DeviceOrientationEvent;
+ if(D&&typeof D.requestPermission==="function"){D.requestPermission().then(r=>{if(r==="granted")listen();else $("st").textContent="Permiso denegado";}).catch(()=>{$("st").textContent="No se pudo activar";});}
+ else listen();};
+function el(){return o.b-90-off.vb;}
+function upd(){
+ if(!got){$("ang").textContent="—";$("mm").textContent="Toca “Activar sensor”";$("el").textContent="—";return;}
+ let b,g;
+ if($("mode").value==="f"){b=o.b-off.fb;g=o.g-off.fg;}else{b=o.b-90-off.vb;g=o.g-off.fg;}
+ const a=Math.sqrt(b*b+g*g),t=Math.tan(a*R);
+ $("ang").textContent=a.toFixed(1)+"°";
+ $("mm").textContent=Math.round(t*1000)+" mm por metro · "+(t*100).toFixed(1)+" %";
+ const c=v=>Math.max(-70,Math.min(70,v*6));
+ const d=$("dot");d.style.transform="translate("+c(g)+"px,"+c(b)+"px)";d.classList.toggle("ok",a<0.3);
+ $("el").textContent=el().toFixed(1)+"°";}
+$("mode").onchange=upd;
+$("cal").onclick=()=>{if($("mode").value==="f"){off.fb=o.b;off.fg=o.g;}else{off.vb=o.b-90;off.fg=o.g;}upd();};
+$("cv").onclick=()=>{off.vb=o.b-90;upd();};
+function calc2(){
+ if(A===null||B===null){$("r2").textContent=A===null&&B===null?"Faltan las dos lecturas":"Falta una lectura";return;}
+ const h=n($("hp").value);
+ if(!(h>0)||A>-1){$("r2").textContent="Apunta más abajo para la base (el muro debe verse inclinando el celular hacia el piso).";return;}
+ const d=h/Math.tan(-A*R),H=h+d*Math.tan(B*R);
+ $("r2").innerHTML="Distancia al muro: "+d.toFixed(2)+" m<br>Altura del muro: "+H.toFixed(2)+" m"+(d>8?"<br><span class=mut>Estás lejos: acércate para más precisión.</span>":"");}
+$("cb").onclick=()=>{if(!got){$("r2").textContent="Primero activa el sensor en la pestaña Nivel.";return;}A=el();calc2();};$("cc").onclick=()=>{if(!got){$("r2").textContent="Primero activa el sensor en la pestaña Nivel.";return;}B=el();calc2();};$("hp").oninput=calc2;
+let rooms=[{l:"4",a:"3",h:"2.4"}];
+function drawRooms(){
+ $("rooms").innerHTML=rooms.map((r,i)=>'<div class="row" style="margin-bottom:6px"><input inputmode="decimal" value="'+r.l+'" placeholder="Largo" oninput="rooms['+i+'].l=this.value;tot()"><input inputmode="decimal" value="'+r.a+'" placeholder="Ancho" oninput="rooms['+i+'].a=this.value;tot()"><input inputmode="decimal" value="'+r.h+'" placeholder="Alto" oninput="rooms['+i+'].h=this.value;tot()"><button class="b g" style="flex:0 0 44px;margin:0" onclick="rooms.splice('+i+',1);drawRooms()">✕</button></div>').join("")+'<div class="mut">Largo · Ancho · Alto (m)</div>';tot();}
+function tot(){let s=0,m=0,p=0;rooms.forEach(r=>{const l=n(r.l)||0,a=n(r.a)||0,h=n(r.h)||0;s+=l*a;p+=2*(l+a);m+=2*(l+a)*h;});
+ $("rt").innerHTML="Suelo: "+s.toFixed(2)+" m²<br>Perímetro: "+p.toFixed(2)+" m<br>Muros (sin descontar vanos): "+m.toFixed(2)+" m²";}
+$("addr").onclick=()=>{rooms.push({l:"",a:"",h:"2.4"});drawRooms();};
+function marca(){const H=n($("hc").value),m=n($("hm").value);
+ $("rm").textContent=(H>0&&m>=0)?"La marca queda a "+(H-m).toFixed(2)+" m bajo el cielo":"";}
+$("hc").oninput=marca;$("hm").oninput=marca;
+$("lec").oninput=()=>{const v=$("lec").value.trim().split(/\s+/).map(n).filter(x=>!isNaN(x));
+ if(v.length<2){$("rl").textContent=v.length===1?"Escribe al menos 2 lecturas.":"";return;}
+ const mn=Math.min(...v),mx=Math.max(...v),pr=v.reduce((a,b)=>a+b,0)/v.length;
+ $("rl").innerHTML="Desnivel máximo: "+(mx-mn).toFixed(1)+" cm<br><span class=mut>Bajo el punto más alto: "+v.map((x,i)=>(i+1)+": "+(x-mn).toFixed(1)).join(" · ")+" cm<br>Para dejar todo a la altura promedio, ajusta cada punto: "+v.map((x,i)=>(i+1)+": "+(x-pr>=0?"rellenar ":"rebajar ")+Math.abs(x-pr).toFixed(1)).join(" · ")+" cm</span>";};
+drawRooms();marca();upd();
+</script></body></html>
